@@ -8,6 +8,16 @@ const controller = require('../controllers/documents.controller');
 const router = express.Router();
 
 function requireUser(req, res, next) {
+  if (!config.allowDemoUserHeader) {
+    res.status(503).json({
+      error: {
+        code: 'AUTHENTICATION_NOT_CONFIGURED',
+        message: 'A autenticação não está configurada neste ambiente.',
+      },
+    });
+    return;
+  }
+
   const userId = req.get('X-User-Id')?.trim();
   if (!userId || userId.length > 100) {
     res.status(401).json({

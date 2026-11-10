@@ -20,11 +20,20 @@ async function download(req, res, next) {
     req.userId
   );
 
-  res.type(document.originalName);
+  res.set('X-Content-Type-Options', 'nosniff');
   res.download(filePath, document.originalName, (error) => {
     if (!error) return;
     if (res.headersSent) {
       res.destroy(error);
+      return;
+    }
+    if (error.code === 'ENOENT') {
+      res.status(404).json({
+        error: {
+          code: 'DOCUMENT_NOT_FOUND',
+          message: 'Documento não encontrado.',
+        },
+      });
       return;
     }
     next(error);

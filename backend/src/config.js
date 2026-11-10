@@ -14,6 +14,7 @@ function positiveIntegerFromEnv(name, fallback) {
 module.exports = {
   port: positiveIntegerFromEnv('PORT', 3000),
   maxFileSizeBytes: positiveIntegerFromEnv('MAX_FILE_SIZE_BYTES', 10 * 1024 * 1024),
+  allowDemoUserHeader: process.env.NODE_ENV !== 'production',
   storageDir: path.resolve(
     process.env.STORAGE_DIR || path.join(__dirname, '../storage')
   ),
