@@ -17,3 +17,7 @@ test('repository checks and removes local files', async (t) => {
   await repository.removeFile(storageName);
   assert.equal(await repository.fileExists(storageName), false);
 });
+
+test('repository rejects storage names that could escape the local directory', () => {
+  assert.throws(() => repository.getFilePath({ storageName: '../outside' }));
+});

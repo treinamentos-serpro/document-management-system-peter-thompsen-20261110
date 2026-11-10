@@ -34,7 +34,19 @@ function getStorageFilePath(storageName) {
   if (!STORAGE_NAME_PATTERN.test(storageName)) {
     throw new Error('Invalid storage name.');
   }
-  return path.join(config.storageDir, storageName);
+
+  const storageDir = path.resolve(config.storageDir);
+  const filePath = path.resolve(storageDir, storageName);
+  const relativePath = path.relative(storageDir, filePath);
+  if (
+    !relativePath
+    || relativePath === '..'
+    || relativePath.startsWith(`..${path.sep}`)
+    || path.isAbsolute(relativePath)
+  ) {
+    throw new Error('Invalid storage path.');
+  }
+  return filePath;
 }
 
 async function fileExists(storageName) {
