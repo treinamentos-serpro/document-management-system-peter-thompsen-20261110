@@ -2,6 +2,15 @@ const express = require('express');
 const documentRoutes = require('./routes/documents.routes');
 const multer = require('multer');
 
+const STORAGE_ERROR_CODES = new Set([
+  'EACCES',
+  'EIO',
+  'EMFILE',
+  'ENFILE',
+  'ENOSPC',
+  'EPERM',
+]);
+
 const app = express();
 const PORT = require('./config').port;
 
@@ -12,6 +21,15 @@ app.get('/health', (req, res) => {
 });
 
 app.use(documentRoutes);
+
+app.use((req, res) => {
+  res.status(404).json({
+    error: {
+      code: 'ROUTE_NOT_FOUND',
+      message: 'Rota não encontrada.',
+    },
+  });
+});
 
 app.use((error, req, res, next) => {
   if (res.headersSent) {
@@ -32,11 +50,23 @@ app.use((error, req, res, next) => {
     return;
   }
 
-  const status = error.statusCode || 500;
+  const isPublicError = Number.isInteger(error.statusCode)
+    && Boolean(error.code)
+    && Boolean(error.publicMessage);
+  const isStorageError = STORAGE_ERROR_CODES.has(error.code);
+  const status = isPublicError ? error.statusCode : 500;
   res.status(status).json({
     error: {
-      code: error.code || 'STORAGE_ERROR',
-      message: error.publicMessage || 'Não foi possível concluir a operação.',
+      code: isPublicError
+        ? error.code
+        : isStorageError
+          ? 'STORAGE_ERROR'
+          : 'INTERNAL_ERROR',
+      message: isPublicError
+        ? error.publicMessage
+        : isStorageError
+          ? 'Não foi possível acessar o armazenamento.'
+          : 'Não foi possível concluir a operação.',
     },
   });
 });
