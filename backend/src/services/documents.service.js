@@ -1,4 +1,3 @@
-const fs = require('node:fs/promises');
 const { randomUUID } = require('node:crypto');
 const repository = require('../repositories/documents.repository');
 
@@ -14,6 +13,10 @@ function normalizeOriginalName(name) {
   const baseName = String(name || '').replace(/\\/g, '/').split('/').pop();
   const normalized = baseName.replace(/[\u0000-\u001f\u007f]/g, '').trim();
   return normalized || 'document';
+}
+
+function documentNotFoundError() {
+  return createHttpError(404, 'DOCUMENT_NOT_FOUND', 'Documento não encontrado.');
 }
 
 async function createDocument(file, owner) {
@@ -33,7 +36,7 @@ async function createDocument(file, owner) {
   try {
     repository.add(document);
   } catch (error) {
-    await fs.unlink(file.path).catch(() => {});
+    await repository.removeFile(file.filename).catch(() => {});
     throw createHttpError(500, 'STORAGE_ERROR', 'Não foi possível salvar o documento.');
   }
 
@@ -47,20 +50,18 @@ function listDocuments(owner) {
 async function getDocumentForDownload(id, owner) {
   const document = repository.findByIdAndOwner(id, owner);
   if (!document) {
-    throw createHttpError(404, 'DOCUMENT_NOT_FOUND', 'Documento não encontrado.');
+    throw documentNotFoundError();
   }
 
-  const filePath = repository.getFilePath(document);
+  let fileExists;
   try {
-    await fs.access(filePath);
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      throw createHttpError(404, 'DOCUMENT_NOT_FOUND', 'Documento não encontrado.');
-    }
+    fileExists = await repository.fileExists(document.storageName);
+  } catch {
     throw createHttpError(500, 'STORAGE_ERROR', 'Não foi possível ler o documento.');
   }
+  if (!fileExists) throw documentNotFoundError();
 
-  return { document, filePath };
+  return { document, filePath: repository.getFilePath(document) };
 }
 
 module.exports = { createDocument, listDocuments, getDocumentForDownload };
