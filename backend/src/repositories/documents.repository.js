@@ -1,3 +1,4 @@
+const fs = require('node:fs/promises');
 const path = require('node:path');
 const config = require('../config');
 
@@ -26,4 +27,25 @@ function getFilePath(document) {
   return path.join(config.storageDir, document.storageName);
 }
 
-module.exports = { add, listByOwner, findByIdAndOwner, getFilePath };
+async function fileExists(filePath) {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch (error) {
+    if (error.code === 'ENOENT') return false;
+    throw error;
+  }
+}
+
+function removeFile(filePath) {
+  return fs.unlink(filePath);
+}
+
+module.exports = {
+  add,
+  listByOwner,
+  findByIdAndOwner,
+  getFilePath,
+  fileExists,
+  removeFile,
+};
