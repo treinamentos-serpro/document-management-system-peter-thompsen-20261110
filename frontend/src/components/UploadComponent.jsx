@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { formatBytes } from '../utils/format.js';
 
-export default function UploadComponent({ onUpload, message }) {
+export default function UploadComponent({ onUpload }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -48,11 +48,6 @@ export default function UploadComponent({ onUpload, message }) {
           {isUploading ? 'Enviando...' : 'Enviar documento'}
         </button>
       </form>
-      {message && (
-        <p className={`feedback feedback-${message.type}`} role={message.type === 'error' ? 'alert' : 'status'}>
-          {message.text}
-        </p>
-      )}
     </section>
   );
 }

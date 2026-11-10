@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import DocumentList from './components/DocumentList.jsx';
 import UploadComponent from './components/UploadComponent.jsx';
 import { downloadDocument, listDocuments, uploadDocument } from './services/documents.js';
@@ -10,35 +10,45 @@ export default function App() {
   const [documents, setDocuments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState(null);
+  const latestListRequest = useRef(0);
+  const currentUserId = useRef(userId);
+  currentUserId.current = userId;
 
   useEffect(() => {
-    let active = true;
+    const requestId = ++latestListRequest.current;
     setIsLoading(true);
     listDocuments(userId)
       .then((items) => {
-        if (active) setDocuments(items);
+        if (requestId === latestListRequest.current) setDocuments(items);
       })
       .catch((error) => {
-        if (active) setMessage({ type: 'error', text: error.message });
+        if (requestId === latestListRequest.current) {
+          setMessage({ type: 'error', text: error.message });
+        }
       })
       .finally(() => {
-        if (active) setIsLoading(false);
+        if (requestId === latestListRequest.current) setIsLoading(false);
       });
 
     return () => {
-      active = false;
+      latestListRequest.current += 1;
     };
   }, [userId]);
 
   async function refreshDocuments() {
+    const requestId = ++latestListRequest.current;
+    const requestedUserId = userId;
     setMessage(null);
     setIsLoading(true);
     try {
-      setDocuments(await listDocuments(userId));
+      const items = await listDocuments(requestedUserId);
+      if (requestId === latestListRequest.current) setDocuments(items);
     } catch (error) {
-      setMessage({ type: 'error', text: error.message });
+      if (requestId === latestListRequest.current) {
+        setMessage({ type: 'error', text: error.message });
+      }
     } finally {
-      setIsLoading(false);
+      if (requestId === latestListRequest.current) setIsLoading(false);
     }
   }
 
@@ -51,15 +61,36 @@ export default function App() {
     }
     localStorage.setItem('dms-user-id', nextUserId);
     setMessage(null);
+    setDocuments([]);
     setUserId(nextUserId);
   }
 
   async function handleUpload(file) {
+    const uploadedForUser = userId;
     setMessage(null);
     try {
-      await uploadDocument(userId, file);
-      setDocuments(await listDocuments(userId));
+      await uploadDocument(uploadedForUser, file);
+      if (currentUserId.current !== uploadedForUser) return true;
+
       setMessage({ type: 'success', text: 'Documento enviado.' });
+      const requestId = ++latestListRequest.current;
+      setIsLoading(true);
+      try {
+        const items = await listDocuments(uploadedForUser);
+        if (requestId === latestListRequest.current) setDocuments(items);
+      } catch {
+        if (
+          requestId === latestListRequest.current
+          && currentUserId.current === uploadedForUser
+        ) {
+          setMessage({
+            type: 'success',
+            text: 'Documento enviado. Não foi possível atualizar a lista; tente atualizá-la.',
+          });
+        }
+      } finally {
+        if (requestId === latestListRequest.current) setIsLoading(false);
+      }
       return true;
     } catch (error) {
       setMessage({ type: 'error', text: error.message });
@@ -106,7 +137,15 @@ export default function App() {
           </button>
         </section>
 
-        <UploadComponent onUpload={handleUpload} message={message} />
+        {message && (
+          <p
+            className={`feedback app-feedback feedback-${message.type}`}
+            role={message.type === 'error' ? 'alert' : 'status'}
+          >
+            {message.text}
+          </p>
+        )}
+        <UploadComponent onUpload={handleUpload} />
         <DocumentList
           documents={documents}
           isLoading={isLoading}
