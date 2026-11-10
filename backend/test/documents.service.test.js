@@ -91,5 +91,5 @@ test('createDocument removes the uploaded file when metadata persistence fails',
     statusCode: 500,
     code: 'STORAGE_ERROR',
   });
-  assert.equal(removedPath, '/storage/stored-file');
+  assert.equal(removedPath, 'stored-file');
 });

@@ -2,6 +2,9 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const config = require('../config');
 
+const STORAGE_NAME_PATTERN =
+  /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
+
 const documents = new Map();
 
 function add(document) {
@@ -24,12 +27,19 @@ function findByIdAndOwner(id, owner) {
 }
 
 function getFilePath(document) {
-  return path.join(config.storageDir, document.storageName);
+  return getStorageFilePath(document.storageName);
 }
 
-async function fileExists(filePath) {
+function getStorageFilePath(storageName) {
+  if (!STORAGE_NAME_PATTERN.test(storageName)) {
+    throw new Error('Invalid storage name.');
+  }
+  return path.join(config.storageDir, storageName);
+}
+
+async function fileExists(storageName) {
   try {
-    await fs.access(filePath);
+    await fs.access(getStorageFilePath(storageName));
     return true;
   } catch (error) {
     if (error.code === 'ENOENT') return false;
@@ -37,8 +47,8 @@ async function fileExists(filePath) {
   }
 }
 
-function removeFile(filePath) {
-  return fs.unlink(filePath);
+function removeFile(storageName) {
+  return fs.unlink(getStorageFilePath(storageName));
 }
 
 module.exports = {

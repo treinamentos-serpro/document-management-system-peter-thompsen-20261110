@@ -36,7 +36,7 @@ async function createDocument(file, owner) {
   try {
     repository.add(document);
   } catch (error) {
-    await repository.removeFile(file.path).catch(() => {});
+    await repository.removeFile(file.filename).catch(() => {});
     throw createHttpError(500, 'STORAGE_ERROR', 'Não foi possível salvar o documento.');
   }
 
@@ -53,16 +53,15 @@ async function getDocumentForDownload(id, owner) {
     throw documentNotFoundError();
   }
 
-  const filePath = repository.getFilePath(document);
   let fileExists;
   try {
-    fileExists = await repository.fileExists(filePath);
+    fileExists = await repository.fileExists(document.storageName);
   } catch {
     throw createHttpError(500, 'STORAGE_ERROR', 'Não foi possível ler o documento.');
   }
   if (!fileExists) throw documentNotFoundError();
 
-  return { document, filePath };
+  return { document, filePath: repository.getFilePath(document) };
 }
 
 module.exports = { createDocument, listDocuments, getDocumentForDownload };
