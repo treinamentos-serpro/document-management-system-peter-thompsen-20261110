@@ -92,6 +92,7 @@ h2 { margin: 0 0 5px; font-size: 16px; font-weight: 700; }
 .file-picker-copy strong { overflow: hidden; color: var(--ink); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .file-picker-copy span { color: var(--muted); font-size: 11px; }
 .feedback { margin: 14px 0 0 44px; font-size: 12px; }
+.app-feedback { margin: 0 0 22px; }
 .feedback-error { color: #a53d2d; }
 .feedback-success { color: var(--green-dark); }
 
